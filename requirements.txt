@@ -1,0 +1,8 @@
+transformers
+streamlit
+torch
+pandas
+ffmpeg
+yt_dlp
+faster_whisper
+numpy
