@@ -156,9 +156,6 @@ def process_video(source, transcription_path):
 
 
 def main():
-    st.set_page_config(page_title="YouTube Video Title Generator",
-                       layout="wide")
-
     st.title("YouTube Video Title Generator")
 
     # Initialize session state
@@ -168,6 +165,8 @@ def main():
         st.session_state.model = None
     if 'tokenizer' not in st.session_state:
         st.session_state.tokenizer = None
+    if 'tab' not in st.session_state:
+        st.session_state.tab = "Single Video"
 
     # Sidebar for model selection
     st.sidebar.header("Model Settings")
@@ -216,21 +215,25 @@ def main():
             st.session_state.current_model_id = model_path
         st.success(f"{selected_model} loaded successfully!")
 
-    # Main content
-    tab1, tab2 = st.tabs(["Single Video", "Random Videos"])
+    # Main content - Tab Selection
+    selected_tab = st.radio("", ["Single Video", "Random Videos"], horizontal=True, key="tab_selector")
+    st.session_state.tab = selected_tab
 
-    with tab1:
+    # Single Video Tab
+    if st.session_state.tab == "Single Video":
         st.header("Generate title for a single video")
         input_type = st.radio("Select input type",
-                              ["YouTube Link", "Local Video File"])
+                              ["YouTube Link", "Local Video File"],
+                              key="input_type_single")
 
         if input_type == "YouTube Link":
             video_url = st.text_input("Enter YouTube URL",
-                                      "https://www.youtube.com/watch?v=dHy-qfkO54E")
+                                      "https://www.youtube.com/watch?v=dHy-qfkO54E",
+                                      key="video_url_input")
             source = video_url
 
             # Add a check button
-            if st.button("Check Video"):
+            if st.button("Check Video", key="check_video_button"):
                 try:
                     with st.spinner("Checking video..."):
                         video_info = check_video_constraints(video_url)
@@ -253,7 +256,8 @@ def main():
                     st.warning("Please check if the URL is correct and the video is available.")
         else:
             video_file = st.file_uploader("Upload video file",
-                                          type=['mp4', 'avi', 'mov'])
+                                          type=['mp4', 'avi', 'mov'],
+                                          key="video_file_uploader")
             source = video_file
 
             # Show file size for uploaded files
@@ -264,7 +268,7 @@ def main():
                 else:
                     st.success(f"File size ({file_size_mb:.1f}MB) is within limit")
 
-        if st.button("Generate Title"):
+        if st.button("Generate Title", key="generate_single_button"):
             if source:
                 try:
                     with st.spinner("Processing video..."):
@@ -287,7 +291,8 @@ def main():
                     st.error(str(e))
                     st.warning("Please try another video or check the URL.")
 
-    with tab2:
+    # Random Videos Tab
+    else:
         st.header("Generate titles for random videos")
 
         # Load dataset from Hugging Face
@@ -300,34 +305,35 @@ def main():
                 num_samples = st.number_input("Number of random samples",
                                               min_value=1,
                                               max_value=10,
-                                              value=5)
+                                              value=5,
+                                              key="num_samples_random")
 
             with col2:
-                # Add a refresh button
-                if st.button("🔄 Generate Titles", key="generate_random"):
+                if st.button("🔄 Generate Titles", key="generate_random_button"):
                     # Sample random examples
                     total_samples = len(dataset)
                     random_indices = torch.randint(0, total_samples, (num_samples,))
                     random_samples = [dataset[idx.item()] for idx in random_indices]
 
-                    for sample in random_samples:
+                    for i, sample in enumerate(random_samples):
                         st.write("---")
-                        with st.expander(f"Sample: {sample['title'][:100]}..."):
+                        with st.expander(f"Sample: {sample['title'][:100]}...", expanded=True):
                             st.write("**Original title:**")
                             st.write(sample['title'])
 
-                            input_text = 'summarize: ' + sample['transcript']
-                            titles = generate_titles(st.session_state.model,
-                                                     st.session_state.tokenizer,
-                                                     input_text,
-                                                     token_max_length)
+                            with st.spinner("Generating titles..."):
+                                input_text = 'summarize: ' + sample['transcript']
+                                titles = generate_titles(st.session_state.model,
+                                                         st.session_state.tokenizer,
+                                                         input_text,
+                                                         token_max_length)
 
                             st.write("**Generated titles:**")
-                            for i, title in enumerate(titles, 1):
-                                st.write(f"{i}. {title}")
+                            for j, title in enumerate(titles, 1):
+                                st.write(f"{j}. {title}")
 
-                            # Add a "Show Transcript" option
-                            if st.checkbox("Show Transcript", key=f"transcript_{sample['title'][:20]}"):
+                            # Add a "Show Transcript" option with a unique key
+                            if st.checkbox("Show Transcript", key=f"transcript_{i}_{hash(sample['title'][:20])}"):
                                 st.write("**Transcript:**")
                                 st.write(sample['transcript'][:500] + "...")
 
@@ -342,4 +348,6 @@ def main():
 
 
 if __name__ == "__main__":
+    st.set_page_config(page_title="YouTube Video Title Generator",
+                       layout="wide")
     main()
