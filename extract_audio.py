@@ -12,14 +12,15 @@ def extract_audio(video, output_path):
 
 def extract_youtube_audio(link, data_folder):
     print("downloading audio...")
+    audio_path = os.path.join(data_folder, 'audio.wav')
     try:
-        os.remove(data_folder + 'audio.wav')
+        os.remove(audio_path)
     except OSError as e:
-        print("Error: %s - %s." % (e.filename, e.strerror))
+        print("%s - %s - Need to download audio." % (e.filename, e.strerror))
     ydl_opts = {
         'extract_audio': True,
         'format': 'bestaudio',
-        'outtmpl': data_folder + 'audio.wav',
+        'outtmpl': audio_path,
         'quiet': True
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -28,7 +29,6 @@ def extract_youtube_audio(link, data_folder):
         ydl.download(link)
     print("finished downloading")
 
-    audio_path = data_folder + 'audio.wav'  # file name of your downloaded audio
     print("audio saved to: ", audio_path)
 
     return video_title, audio_path
