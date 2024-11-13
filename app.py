@@ -332,10 +332,6 @@ def main():
                             for j, title in enumerate(titles, 1):
                                 st.write(f"{j}. {title}")
 
-                            # Add a "Show Transcript" option with a unique key
-                            if st.checkbox("Show Transcript", key=f"transcript_{i}_{hash(sample['title'][:20])}"):
-                                st.write("**Transcript:**")
-                                st.write(sample['transcript'][:500] + "...")
 
             # Add dataset statistics
             with st.expander("Dataset Information"):
