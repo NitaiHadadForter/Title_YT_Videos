@@ -13,7 +13,7 @@
 **Local App Run:**
 - Clone the repository
 - run `pip install -r requirements.txt`
-- run `streamlint run app.py`
+- run `streamlit run app.py`
 
 **Train:**
 - Run t5_fintune_model notebook

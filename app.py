@@ -16,9 +16,9 @@ DATASET_ID = "NitaiHadad/yt-titles-transcripts-clean"
 
 # Define available models
 MODELS = {
-    "Flan-T5 Model": "NitaiHadad/video-to-titles-flan",
     "T5-Small Model": "NitaiHadad/video-to-titles-small",
-    "T5-Base Model": "NitaiHadad/video-to-titles-base"
+    "T5-Base Model": "NitaiHadad/video-to-titles-base",
+    "Flan-T5 Model": "NitaiHadad/video-to-titles-flan"
 }
 
 
@@ -193,9 +193,9 @@ def main():
     # Add model information
     with st.sidebar.expander("Model Information"):
         st.write({
-                     "Flan-T5 Model": "Fine-tuned on Flan-T5 base model, optimized for natural language generation.",
                      "T5-Small Model": "Lightweight model fine-tuned on T5-small, good for quick generations.",
-                     "T5-Base Model": "Larger model with better generation quality but slower inference."
+                     "T5-Base Model": "Larger model with better generation quality but slower inference.",
+                     "Flan-T5 Model": "Fine-tuned on Flan-T5 base model, optimized for natural language generation."
                  }[selected_model])
 
     # Token length setting
@@ -332,10 +332,6 @@ def main():
                             for j, title in enumerate(titles, 1):
                                 st.write(f"{j}. {title}")
 
-                            # Add a "Show Transcript" option with a unique key
-                            if st.checkbox("Show Transcript", key=f"transcript_{i}_{hash(sample['title'][:20])}"):
-                                st.write("**Transcript:**")
-                                st.write(sample['transcript'][:500] + "...")
 
             # Add dataset statistics
             with st.expander("Dataset Information"):
