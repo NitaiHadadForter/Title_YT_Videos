@@ -3,6 +3,7 @@ streamlit
 torch
 pandas
 ffmpeg-python
+ffmpeg
 yt_dlp
 faster_whisper
 numpy
