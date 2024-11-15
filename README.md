@@ -16,4 +16,5 @@
 - run `streamlit run app.py`
 
 **Train:**
-- Run t5_fintune_model notebook
+- Run finetune_models.ipynb notebook, preferably in high resources enviorment like Google Colab Pro L4
+- Choose which model you want to finetune (only 1,2 and 3 are vailid inputs)
