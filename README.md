@@ -10,7 +10,7 @@
  
 **Streamlint app link:** https://youtube-titles-generator.streamlit.app/
 
-*App instruction*
+* App instruction *
 The application has two modes of operation:
 1. Single video - youtube link or local video file. The model works on video in size of less than 50Mb and length less than 10 minutes, to avoid memory issues.
 2. Random video - chose 5 youtube videos randomly, out of 1,000 videos we stored. In this mode, we skip the transcribing phase and use existing transcription.
