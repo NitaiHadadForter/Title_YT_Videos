@@ -1,13 +1,25 @@
 import os
 import ffmpeg
 import yt_dlp
+import tempfile
 
 
-def extract_audio(video, output_path):
-    stream = ffmpeg.input(video)
-    stream = ffmpeg.output(stream, output_path)
-    ffmpeg.run(stream, overwrite_output=True)
-    return output_path
+
+def extract_audio(uploaded_file, output_path):
+    # Create a temporary file to save the uploaded video
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
+        temp_file.write(uploaded_file.read())
+        temp_file_path = temp_file.name
+
+    try:
+        # Extract audio using the saved temporary file path
+        stream = ffmpeg.input(temp_file_path)
+        stream = ffmpeg.output(stream, output_path)
+        ffmpeg.run(stream, overwrite_output=True)
+        return output_path
+    finally:
+        # Clean up the temporary file
+        os.remove(temp_file_path)
 
 
 def extract_youtube_audio(link, data_folder):

@@ -2,7 +2,7 @@ transformers
 streamlit
 torch
 pandas
-ffmpeg
+ffmpeg-python
 yt_dlp
 faster_whisper
 numpy
