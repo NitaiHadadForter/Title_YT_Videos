@@ -34,6 +34,7 @@ def transcribe_impl(audio_path, output_path):
     #           (segment.start, segment.end, segment.text))
 
     with open(output_path, "w") as outfile:
+        print("Writing transcription to", output_path)
         outfile.write("\n".join([s.text for s in segments]))
     print("Finished transcription")
 
