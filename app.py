@@ -137,9 +137,9 @@ def process_video(source, transcription_path):
     """Process video and return transcription path"""
     os.makedirs(transcription_path, exist_ok=True)
     audio_path = os.path.join(transcription_path, 'audio.wav')
+    status_info = st.empty()
 
     try:
-        status_info = st.empty()
         if isinstance(source, str) and source.startswith('https://www.youtube.com/'):
             # Check constraints before processing
             video_info = check_video_constraints(source)
@@ -150,40 +150,43 @@ def process_video(source, transcription_path):
             video_id = source.split('watch?v=')[-1]
             audio_transcription_path = os.path.join(transcription_path, f'transcription-{video_id}.txt')
 
-            # Process the video
-            _, audio_path = extract_youtube_audio(source, transcription_path)
+            # Only process if transcription doesn't exist
+            if not os.path.exists(audio_transcription_path):
+                # Process the video
+                _, audio_path = extract_youtube_audio(source, transcription_path)
+                status_info.info("Transcribing audio...")
+                transcribe(audio_path, audio_transcription_path)
+                status_info.success("Done transcribing audio")
 
+                # Clean up audio file
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+            else:
+                status_info.info("Using existing transcription...")
 
-            status_info.info("Transcribing audio...")
-            transcribe(audio_path, audio_transcription_path)
-
-            # Clean up audio file
-            if os.path.exists(audio_path):
-                os.remove(audio_path)
-
-            status_info.success("Done transcribing audio")
             return audio_transcription_path
 
         else:
             file_name = source.name
             audio_transcription_path = os.path.join(transcription_path, f'transcription-{file_name}.txt')
 
-            extract_audio(source, audio_path)
-            status_info.info("Transcribing audio...")
-            transcribe(audio_path, audio_transcription_path)
-            status_info.info("Done transcribing audio")
+            if not os.path.exists(audio_transcription_path):
+                extract_audio(source, audio_path)
+                status_info.info("Transcribing audio...")
+                transcribe(audio_path, audio_transcription_path)
+                status_info.success("Done transcribing audio")
 
-            if os.path.exists(audio_path):
-                os.remove(audio_path)
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
 
             return audio_transcription_path
 
     except Exception as e:
         if os.path.exists(audio_path):
             os.remove(audio_path)
-        print(e)
+        if os.path.exists(audio_transcription_path):
+            os.remove(audio_transcription_path)
         raise Exception(f"Error processing video: {str(e)}")
-
 
 def main():
     st.title("YouTube Video Title Generator")
@@ -359,24 +362,28 @@ def main():
                     for i, sample in enumerate(random_samples):
                         st.write("---")
                         try:
+                            audio_transcription_path = None
                             if dataset_config["has_transcripts"]:
                                 transcript = sample[dataset_config["transcript_field"]]
                                 original_title = sample[dataset_config["title_field"]]
                             else:
-                                url = get_youtube_url(sample[dataset_config["url_field"]])
-                                video_info = check_video_constraints(url)
+                                with st.spinner(f"Processing video {i + 1}..."):
+                                    url = get_youtube_url(sample[dataset_config["url_field"]])
+                                    video_info = check_video_constraints(url)
 
-                                if not video_info['is_valid']:
-                                    st.warning(f"Skipping sample {i + 1}: {video_info['error_message']}")
-                                    continue
+                                    if not video_info['is_valid']:
+                                        st.warning(f"Skipping sample {i + 1}: {video_info['error_message']}")
+                                        continue
 
-                                audio_transcription_path = process_video(url, TRANSCRIPTION_DIR)
-                                transcript = open(audio_transcription_path, "r").read()
-                                original_title = video_info['title']
-
-                                # Clean up
-                                if os.path.exists(audio_transcription_path):
-                                    os.remove(audio_transcription_path)
+                                    try:
+                                        audio_transcription_path = process_video(url, TRANSCRIPTION_DIR)
+                                        print("Transcription path: ", audio_transcription_path)
+                                        with open(audio_transcription_path, "r") as f:
+                                            transcript = f.read()
+                                        original_title = video_info['title']
+                                    except Exception as e:
+                                        st.error(f"Error processing video {i + 1}: {str(e)}")
+                                        continue
 
                             with st.expander(f"Sample {i + 1}: {original_title[:100]}...", expanded=True):
                                 st.write("**Original title:**")
@@ -394,9 +401,11 @@ def main():
                                 st.write("**Generated titles:**")
                                 for j, title in enumerate(titles, 1):
                                     st.write(f"{j}. {title}")
-                        except Exception as e:
-                            st.error(f"Error processing sample {i + 1}: {str(e)}")
-                            continue
+
+                        finally:
+                            # Clean up transcription file if it was created
+                            if audio_transcription_path and os.path.exists(audio_transcription_path):
+                                os.remove(audio_transcription_path)
 
             # Add dataset statistics
             with st.expander("Dataset Information"):
