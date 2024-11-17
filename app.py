@@ -9,18 +9,43 @@ from extract_audio import extract_youtube_audio, extract_audio
 from extract_transcription import transcribe
 
 # Constants
-MAX_SIZE_MB = 50
-MAX_DURATION_MINUTES = 10
+MAX_SIZE_MB = 100
+MAX_DURATION_MINUTES = 15
 TRANSCRIPTION_DIR = 'transcription_data'
-DATASET_ID = "NitaiHadad/yt-titles-transcripts-clean"
 
 # Define available models
 MODELS = {
-    "T5-Small Model": "NitaiHadad/video-to-titles-small",
     "T5-Base Model": "NitaiHadad/video-to-titles-base",
-    "Flan-T5 Model": "NitaiHadad/video-to-titles-flan"
+    "Flan-T5 Model": "NitaiHadad/video-to-titles-flan",
+    "T5-Small Model": "NitaiHadad/video-to-titles-small",
 }
 
+DATASETS = {
+        "Trained Dateset": {
+            "id": "NitaiHadad/yt-titles-transcripts-clean",
+            "url_field": "vid_id",
+            "has_transcripts": True,
+            "transcript_field": "transcript",
+            "title_field": "title"
+        },
+        "TedTalk": {
+            "id": "NitaiHadad/tedtalk_yotube_urls",
+            "url_field": "video_link",  # This dataset uses video IDs
+            "has_transcripts": False
+        },
+    }
+
+# Add this function right after the DATASETS constant
+def get_youtube_url(video_id_or_url):
+    """Convert video ID to full URL if needed"""
+    if isinstance(video_id_or_url, str):
+        if video_id_or_url.startswith('http'):
+            return video_id_or_url
+        else:
+            return f"https://www.youtube.com/watch?v={video_id_or_url}"
+    else:
+        st.error(f"Invalid video ID or URL format: {video_id_or_url}")
+        return None
 
 def check_video_constraints(url):
     """Check if video meets size and duration constraints"""
@@ -57,10 +82,10 @@ def check_video_constraints(url):
 
 
 @st.cache_data
-def load_huggingface_dataset():
-    """Load the dataset from Hugging Face"""
+def load_huggingface_dataset(dataset_config):
+    """Load the dataset from Hugging Face with configurable fields"""
     try:
-        dataset = load_dataset(DATASET_ID, split='train')
+        dataset = load_dataset(dataset_config["id"], split='train')
         return dataset
     except Exception as e:
         st.error(f"Error loading dataset: {str(e)}")
@@ -114,6 +139,7 @@ def process_video(source, transcription_path):
     audio_path = os.path.join(transcription_path, 'audio.wav')
 
     try:
+        status_info = st.empty()
         if isinstance(source, str) and source.startswith('https://www.youtube.com/'):
             # Check constraints before processing
             video_info = check_video_constraints(source)
@@ -126,14 +152,16 @@ def process_video(source, transcription_path):
 
             # Process the video
             _, audio_path = extract_youtube_audio(source, transcription_path)
-            st.info("Transcribing audio...")
+
+
+            status_info.info("Transcribing audio...")
             transcribe(audio_path, audio_transcription_path)
 
             # Clean up audio file
             if os.path.exists(audio_path):
-                print(f"Removing audio file: {audio_path}")
                 os.remove(audio_path)
 
+            status_info.success("Done transcribing audio")
             return audio_transcription_path
 
         else:
@@ -141,8 +169,9 @@ def process_video(source, transcription_path):
             audio_transcription_path = os.path.join(transcription_path, f'transcription-{file_name}.txt')
 
             extract_audio(source, audio_path)
-            st.info("Transcribing audio...")
+            status_info.info("Transcribing audio...")
             transcribe(audio_path, audio_transcription_path)
+            status_info.info("Done transcribing audio")
 
             if os.path.exists(audio_path):
                 os.remove(audio_path)
@@ -152,6 +181,7 @@ def process_video(source, transcription_path):
     except Exception as e:
         if os.path.exists(audio_path):
             os.remove(audio_path)
+        print(e)
         raise Exception(f"Error processing video: {str(e)}")
 
 
@@ -202,7 +232,7 @@ def main():
     token_max_length = st.sidebar.number_input("Token max length",
                                                min_value=128,
                                                max_value=1024,
-                                               value=512)
+                                               value=1024)
 
     # Load model if it's different from the current one
     if st.session_state.current_model_id != model_path:
@@ -275,14 +305,16 @@ def main():
                         audio_transcription_path = process_video(source, TRANSCRIPTION_DIR)
 
                         input_text = 'summarize: ' + open(audio_transcription_path, "r").read()
+                        generation_info = st.empty()
+                        generation_info.info("Generating titles...")
                         titles = generate_titles(st.session_state.model,
                                                  st.session_state.tokenizer,
                                                  input_text,
                                                  token_max_length)
                         if os.path.exists(audio_transcription_path):
-                            print(f"Removing transcription file: {audio_transcription_path}")
                             os.remove(audio_transcription_path)
 
+                        generation_info.success("Done generating titles")
                         st.subheader("Generated Titles:")
                         for i, title in enumerate(titles, 1):
                             st.write(f"{i}. {title}")
@@ -295,18 +327,27 @@ def main():
     else:
         st.header("Generate titles for random videos")
 
-        # Load dataset from Hugging Face
-        dataset = load_huggingface_dataset()
+        # Dataset selection
+        selected_dataset = st.selectbox(
+            "Select Dataset",
+            list(DATASETS.keys()),
+            help="Choose the dataset to use for random samples"
+        )
+
+        dataset_config = DATASETS[selected_dataset]
+        dataset = load_huggingface_dataset(dataset_config)
 
         if dataset is not None:
             col1, col2 = st.columns(2)
 
             with col1:
-                num_samples = st.number_input("Number of random samples",
-                                              min_value=1,
-                                              max_value=10,
-                                              value=5,
-                                              key="num_samples_random")
+                num_samples = st.number_input(
+                    "Number of random samples",
+                    min_value=1,
+                    max_value=10,
+                    value=5,
+                    key="num_samples_random"
+                )
 
             with col2:
                 if st.button("🔄 Generate Titles", key="generate_random_button"):
@@ -317,31 +358,58 @@ def main():
 
                     for i, sample in enumerate(random_samples):
                         st.write("---")
-                        with st.expander(f"Sample: {sample['title'][:100]}...", expanded=True):
-                            st.write("**Original title:**")
-                            st.write(sample['title'])
+                        try:
+                            if dataset_config["has_transcripts"]:
+                                transcript = sample[dataset_config["transcript_field"]]
+                                original_title = sample[dataset_config["title_field"]]
+                            else:
+                                url = get_youtube_url(sample[dataset_config["url_field"]])
+                                video_info = check_video_constraints(url)
 
-                            with st.spinner("Generating titles..."):
-                                input_text = 'summarize: ' + sample['transcript']
-                                titles = generate_titles(st.session_state.model,
-                                                         st.session_state.tokenizer,
-                                                         input_text,
-                                                         token_max_length)
+                                if not video_info['is_valid']:
+                                    st.warning(f"Skipping sample {i + 1}: {video_info['error_message']}")
+                                    continue
 
-                            st.write("**Generated titles:**")
-                            for j, title in enumerate(titles, 1):
-                                st.write(f"{j}. {title}")
+                                audio_transcription_path = process_video(url, TRANSCRIPTION_DIR)
+                                transcript = open(audio_transcription_path, "r").read()
+                                original_title = video_info['title']
 
+                                # Clean up
+                                if os.path.exists(audio_transcription_path):
+                                    os.remove(audio_transcription_path)
+
+                            with st.expander(f"Sample {i + 1}: {original_title[:100]}...", expanded=True):
+                                st.write("**Original title:**")
+                                st.write(original_title)
+
+                                with st.spinner("Generating titles..."):
+                                    input_text = 'summarize: ' + transcript
+                                    titles = generate_titles(
+                                        st.session_state.model,
+                                        st.session_state.tokenizer,
+                                        input_text,
+                                        token_max_length
+                                    )
+
+                                st.write("**Generated titles:**")
+                                for j, title in enumerate(titles, 1):
+                                    st.write(f"{j}. {title}")
+                        except Exception as e:
+                            st.error(f"Error processing sample {i + 1}: {str(e)}")
+                            continue
 
             # Add dataset statistics
             with st.expander("Dataset Information"):
                 st.write(f"Total number of samples: {len(dataset)}")
                 st.write("Dataset source: Hugging Face")
-                st.write("Dataset ID: " + DATASET_ID)
+                st.write("Dataset ID: " + dataset_config["id"])
+                st.write("Dataset type: " + (
+                    "Contains transcripts" if dataset_config["has_transcripts"]
+                    else "Contains URLs only"
+                ))
         else:
-            st.error("Failed to load the dataset from Hugging Face. Please try again later.")
+            st.error("Failed to load the dataset. Please try another dataset or try again later.")
             st.info("You can still use the single video feature in the meantime.")
-
 
 if __name__ == "__main__":
     st.set_page_config(page_title="YouTube Video Title Generator",
