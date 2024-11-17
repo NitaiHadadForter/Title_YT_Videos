@@ -408,7 +408,6 @@ def main():
                             # Clean up transcription file if it was created
                             if audio_transcription_path and os.path.exists(audio_transcription_path):
                                 os.remove(audio_transcription_path)
-                            time.sleep(3)
 
             # Add dataset statistics
             with st.expander("Dataset Information"):
