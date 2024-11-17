@@ -30,11 +30,11 @@ DATASETS = {
             "transcript_field": "transcript",
             "title_field": "title"
         },
-        "TedTalk": {
-            "id": "NitaiHadad/tedtalk_yotube_urls",
-            "url_field": "video_link",  # This dataset uses video IDs
-            "has_transcripts": False
-        },
+        # "TedTalk": {
+        #     "id": "NitaiHadad/tedtalk_yotube_urls",
+        #     "url_field": "video_link",  # This dataset uses video IDs
+        #     "has_transcripts": False
+        # },
     }
 
 # Add this function right after the DATASETS constant
