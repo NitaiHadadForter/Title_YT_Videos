@@ -5,7 +5,7 @@
   * YouTube video - given url, must be less than 10 minutes and 50Mb
   * Local Video - upload local video file
 - Random Videos
-  * Randomly choose 5 videos to predict, out of ~18k videos
+  * Randomly choose 5 videos to predict out of chosen dataset - YouTube dataset (used for training), or TedTalk dataset
 - For both modes the user can choose which fine-tuned model to use - small, base and flan
  
 **Streamlint app link:** https://youtube-titles-generator.streamlit.app/
