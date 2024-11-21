@@ -1,5 +1,3 @@
-import time
-
 import streamlit as st
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from datasets import load_dataset
@@ -10,12 +8,10 @@ import json
 from extract_audio import extract_youtube_audio, extract_audio
 from extract_transcription import transcribe
 
-# Constants
 MAX_SIZE_MB = 100
 MAX_DURATION_MINUTES = 15
 TRANSCRIPTION_DIR = 'transcription_data'
 
-# Define available models
 MODELS = {
     "T5-Base Model": "NitaiHadad/video-to-titles-base",
     "Flan-T5 Model": "NitaiHadad/video-to-titles-flan",
@@ -39,7 +35,6 @@ DATASETS = {
         },
     }
 
-# Add this function right after the DATASETS constant
 def get_youtube_url(video_id_or_url):
     """Convert video ID to full URL if needed"""
     if isinstance(video_id_or_url, str):
@@ -54,7 +49,6 @@ def get_youtube_url(video_id_or_url):
 def check_video_constraints(url):
     """Check if video meets size and duration constraints"""
     try:
-        # Use yt-dlp to get video info
         cmd = ['yt-dlp', '--dump-json', '--no-playlist', url]
         result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -145,7 +139,6 @@ def process_video(source, transcription_path):
 
     try:
         if isinstance(source, str) and source.startswith('https://www.youtube.com/'):
-            # Check constraints before processing
             video_info = check_video_constraints(source)
 
             if not video_info['is_valid']:
@@ -156,7 +149,6 @@ def process_video(source, transcription_path):
 
             # Only process if transcription doesn't exist
             if not os.path.exists(audio_transcription_path):
-                # Process the video
                 _, audio_path = extract_youtube_audio(source, transcription_path)
                 status_info.info("Transcribing audio...")
                 transcribe(audio_path, audio_transcription_path)
@@ -195,7 +187,6 @@ def process_video(source, transcription_path):
 def main():
     st.title("YouTube Video Title Generator")
 
-    # Initialize session state
     if 'current_model_id' not in st.session_state:
         st.session_state.current_model_id = None
     if 'model' not in st.session_state:
