@@ -23,7 +23,7 @@ MODELS = {
 }
 
 DATASETS = {
-        "Trained Dateset": {
+        "YouTube": {
             "id": "NitaiHadad/yt-titles-transcripts-clean",
             "url_field": "vid_id",
             "has_transcripts": True,
